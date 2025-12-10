@@ -1,0 +1,219 @@
+import { BadRequestException, Injectable } from "@nestjs/common";
+import { eachDayOfInterval, endOfMonth, isWeekend, startOfMonth } from "date-fns";
+import { DbService } from "../db/db.service";
+import { LeaveStatus } from "../db/types";
+import { LeaveDateResponseDto } from "./dto/leave-date-response.dto";
+import { TeamLeaveResponseDto, TeamLeaveUserDto } from "./dto/team-leave-response.dto";
+import { LeaveUpdateStatus } from "./dto/set-leave-dates.dto";
+
+@Injectable()
+export class LeaveService {
+  constructor(private readonly db: DbService) {}
+
+  async setLeaveDates(
+    userId: string,
+    dates: string[],
+    status: LeaveUpdateStatus,
+    updatedBy: string,
+  ) {
+    if (![LeaveUpdateStatus.LEAVE, LeaveUpdateStatus.AVAILABLE].includes(status as LeaveUpdateStatus)) {
+      throw new BadRequestException("Status must be LEAVE or AVAILABLE");
+    }
+
+    const parsedDates = dates.map((dateString) => this.parseDateString(dateString));
+    const statusToPersist = status as LeaveStatus;
+
+    try {
+      const now = new Date();
+      return await Promise.all(
+        parsedDates.map((date) =>
+          this.db.user_leave_dates.upsert({
+            where: { userId_date: { userId, date } },
+            update: { status: statusToPersist, updatedBy, updatedAt: now },
+            create: { userId, date, status: statusToPersist, createdBy: updatedBy, updatedBy },
+          }),
+        ),
+      );
+    } catch (_error) {
+      throw new BadRequestException("Failed to set leave dates");
+    }
+  }
+
+  async getLeaveDates(
+    userId: string,
+    startDate?: Date,
+    endDate?: Date,
+  ): Promise<LeaveDateResponseDto[]> {
+    const { start, end } = this.resolveRange(startDate, endDate);
+
+    const [userLeaveDates, wiproHolidays] = await Promise.all([
+      this.db.user_leave_dates.findMany({
+        where: { userId, date: { gte: start, lte: end } },
+        orderBy: { date: "asc" },
+      }),
+      this.db.wipro_holidays.findMany({
+        where: { date: { gte: start, lte: end } },
+        orderBy: { date: "asc" },
+      }),
+    ]);
+
+    const leaveByDate = new Map<string, (typeof userLeaveDates)[number]>();
+    userLeaveDates.forEach((record) => {
+      const key = this.formatDateKey(record.date);
+      leaveByDate.set(key, record);
+    });
+
+    const holidayByDate = new Map<string, (typeof wiproHolidays)[number]>();
+    wiproHolidays.forEach((holiday) => {
+      const key = this.formatDateKey(holiday.date);
+      holidayByDate.set(key, holiday);
+    });
+
+    const dates = eachDayOfInterval({ start, end });
+
+    const calendar = dates.map((day) => {
+      const key = this.formatDateKey(day);
+      const weekend = isWeekend(day);
+      let status: LeaveStatus = weekend ? LeaveStatus.WEEKEND : LeaveStatus.AVAILABLE;
+      const holiday = holidayByDate.get(key);
+      const userLeave = leaveByDate.get(key);
+
+      let isWiproHoliday = false;
+      let holidayName: string | undefined;
+
+      if (holiday) {
+        status = LeaveStatus.WIPRO_HOLIDAY;
+        isWiproHoliday = true;
+        holidayName = holiday.name || undefined;
+      }
+
+      if (userLeave) {
+        status = userLeave.status;
+      }
+
+      const response: LeaveDateResponseDto = {
+        date: key,
+        status,
+        isWeekend: weekend,
+        isWiproHoliday,
+        holidayName,
+      };
+
+      return response;
+    });
+
+    return calendar;
+  }
+
+  // Note: user_leave_dates is expected to store leave entries for Topcoder Staff/Administrator users.
+  // LeaveAccessGuard enforces that only these roles can consume the aggregated team calendar.
+  async getTeamLeave(startDate?: Date, endDate?: Date): Promise<TeamLeaveResponseDto[]> {
+    const { start, end } = this.resolveRange(startDate, endDate);
+
+    const [leaveRecords, holidays] = await Promise.all([
+      this.db.user_leave_dates.findMany({
+        where: { date: { gte: start, lte: end }, status: LeaveStatus.LEAVE },
+        orderBy: { date: "asc" },
+      }),
+      this.db.wipro_holidays.findMany({
+        where: { date: { gte: start, lte: end } },
+        orderBy: { date: "asc" },
+      }),
+    ]);
+
+    const grouped = new Map<string, TeamLeaveUserDto[]>();
+
+    leaveRecords.forEach((record) => {
+      const key = this.formatDateKey(record.date);
+      const handle = (record.updatedBy as string) || (record.createdBy as string) || record.userId;
+      const users = grouped.get(key) || [];
+      users.push({ userId: record.userId, handle, status: record.status });
+      grouped.set(key, users);
+    });
+
+    holidays.forEach((holiday) => {
+      const key = this.formatDateKey(holiday.date);
+      const users = grouped.get(key) || [];
+      users.push({
+        userId: "wipro-holiday",
+        handle: holiday.name || "Wipro Holiday",
+        status: LeaveStatus.WIPRO_HOLIDAY,
+      });
+      grouped.set(key, users);
+    });
+
+    const response: TeamLeaveResponseDto[] = Array.from(grouped.entries())
+      .sort(([a], [b]) => (a < b ? -1 : 1))
+      .map(([date, usersOnLeave]) => ({ date, usersOnLeave }));
+
+    return response;
+  }
+
+  async createWiproHolidays(dates: string[], name: string | undefined, createdBy: string) {
+    const parsedDates = dates.map((dateString) => this.parseDateString(dateString));
+    const now = new Date();
+
+    await this.db.wipro_holidays.createMany({
+      data: parsedDates.map((date) => ({
+        date,
+        name,
+        createdBy,
+        updatedBy: createdBy,
+        createdAt: now,
+        updatedAt: now,
+      })),
+      skipDuplicates: true,
+    });
+
+    return this.db.wipro_holidays.findMany({
+      where: { date: { in: parsedDates } },
+      orderBy: { date: "asc" },
+    });
+  }
+
+  async getWiproHolidays(startDate?: Date, endDate?: Date) {
+    const { start, end } = this.resolveRange(startDate, endDate);
+    return this.db.wipro_holidays.findMany({
+      where: { date: { gte: start, lte: end } },
+      orderBy: { date: "asc" },
+    });
+  }
+
+  private parseDateString(dateString: string): Date {
+    const parsed = new Date(dateString);
+    if (Number.isNaN(parsed.getTime())) {
+      throw new BadRequestException(`Invalid date format: ${dateString}`);
+    }
+    return parsed;
+  }
+
+  private resolveRange(startDate?: Date, endDate?: Date) {
+    const now = new Date();
+    let start: Date;
+    let end: Date;
+
+    if (!startDate && !endDate) {
+      start = startOfMonth(now);
+      end = endOfMonth(now);
+    } else if (startDate && !endDate) {
+      start = startDate;
+      end = endOfMonth(startDate);
+    } else if (!startDate && endDate) {
+      start = startOfMonth(endDate);
+      end = endDate;
+    } else {
+      start = startDate!;
+      end = endDate!;
+    }
+
+    if (start > end) {
+      throw new BadRequestException("startDate must be before or equal to endDate");
+    }
+
+    return { start, end };
+  }
+
+  private formatDateKey(date: Date) {
+    return date.toISOString().split("T")[0];
+  }
+}
