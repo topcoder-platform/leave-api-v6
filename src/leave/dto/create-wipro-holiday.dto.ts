@@ -1,5 +1,11 @@
 import { ApiProperty } from "@nestjs/swagger";
-import { ArrayMinSize, IsArray, IsDateString, IsOptional, IsString } from "class-validator";
+import {
+  ArrayMinSize,
+  IsArray,
+  IsDateString,
+  IsOptional,
+  IsString,
+} from "class-validator";
 
 export class CreateWiproHolidayDto {
   @ApiProperty({

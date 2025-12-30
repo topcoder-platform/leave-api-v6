@@ -6,7 +6,12 @@ import { HealthModule } from "./health/health.module";
 import { LeaveModule } from "./leave/leave.module";
 
 @Module({
-  imports: [ConfigModule.forRoot({ isGlobal: true }), DbModule, LeaveModule, HealthModule],
+  imports: [
+    ConfigModule.forRoot({ isGlobal: true }),
+    DbModule,
+    LeaveModule,
+    HealthModule,
+  ],
 })
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {

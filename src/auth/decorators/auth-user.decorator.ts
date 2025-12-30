@@ -9,7 +9,9 @@ export interface AuthUser {
 
 export const AuthUser = createParamDecorator(
   (data: keyof AuthUser | undefined, ctx: ExecutionContext) => {
-    const request = ctx.switchToHttp().getRequest<{ authUser?: Partial<AuthUser> }>();
+    const request = ctx
+      .switchToHttp()
+      .getRequest<{ authUser?: Partial<AuthUser> }>();
     const authUser = request.authUser;
 
     if (!authUser) {

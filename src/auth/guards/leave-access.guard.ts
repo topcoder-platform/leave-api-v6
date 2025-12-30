@@ -25,7 +25,9 @@ export class LeaveAccessGuard implements CanActivate {
     }
 
     if (request.authUser.isMachine) {
-      throw new ForbiddenException("M2M tokens are not allowed for this service");
+      throw new ForbiddenException(
+        "M2M tokens are not allowed for this service",
+      );
     }
 
     const roles = request.authUser.roles || [];
@@ -41,7 +43,10 @@ export class LeaveAccessGuard implements CanActivate {
 
   private hasRequiredRole(roles: string[]): boolean {
     const normalizedRoles = roles.map((role) => role.toLowerCase());
-    const allowedRoles = [UserRoles.Admin.toLowerCase(), UserRoles.TopcoderStaff.toLowerCase()];
+    const allowedRoles = [
+      UserRoles.Admin.toLowerCase(),
+      UserRoles.TopcoderStaff.toLowerCase(),
+    ];
 
     return allowedRoles.some((role) => normalizedRoles.includes(role));
   }

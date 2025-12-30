@@ -1,10 +1,21 @@
 import { BadRequestException, Injectable } from "@nestjs/common";
-import { eachDayOfInterval, endOfMonth, isWeekend, startOfMonth } from "date-fns";
+import {
+  eachDayOfInterval,
+  endOfMonth,
+  isWeekend,
+  startOfMonth,
+} from "date-fns";
 import { DbService } from "../db/db.service";
 import { LeaveStatus } from "../db/types";
 import { LeaveDateResponseDto } from "./dto/leave-date-response.dto";
-import { TeamLeaveResponseDto, TeamLeaveUserDto } from "./dto/team-leave-response.dto";
-import { LeaveUpdateStatus } from "./dto/set-leave-dates.dto";
+import {
+  TeamLeaveResponseDto,
+  TeamLeaveUserDto,
+} from "./dto/team-leave-response.dto";
+import {
+  LEAVE_UPDATE_STATUSES,
+  LeaveUpdateStatus,
+} from "./dto/set-leave-dates.dto";
 
 @Injectable()
 export class LeaveService {
@@ -16,12 +27,14 @@ export class LeaveService {
     status: LeaveUpdateStatus,
     updatedBy: string,
   ) {
-    if (![LeaveUpdateStatus.LEAVE, LeaveUpdateStatus.AVAILABLE].includes(status as LeaveUpdateStatus)) {
+    if (!LEAVE_UPDATE_STATUSES.includes(status)) {
       throw new BadRequestException("Status must be LEAVE or AVAILABLE");
     }
 
-    const parsedDates = dates.map((dateString) => this.parseDateString(dateString));
-    const statusToPersist = status as LeaveStatus;
+    const parsedDates = dates.map((dateString) =>
+      this.parseDateString(dateString),
+    );
+    const statusToPersist: LeaveStatus = status;
 
     try {
       const now = new Date();
@@ -30,11 +43,17 @@ export class LeaveService {
           this.db.user_leave_dates.upsert({
             where: { userId_date: { userId, date } },
             update: { status: statusToPersist, updatedBy, updatedAt: now },
-            create: { userId, date, status: statusToPersist, createdBy: updatedBy, updatedBy },
+            create: {
+              userId,
+              date,
+              status: statusToPersist,
+              createdBy: updatedBy,
+              updatedBy,
+            },
           }),
         ),
       );
-    } catch (_error) {
+    } catch {
       throw new BadRequestException("Failed to set leave dates");
     }
   }
@@ -74,7 +93,9 @@ export class LeaveService {
     const calendar = dates.map((day) => {
       const key = this.formatDateKey(day);
       const weekend = isWeekend(day);
-      let status: LeaveStatus = weekend ? LeaveStatus.WEEKEND : LeaveStatus.AVAILABLE;
+      let status: LeaveStatus = weekend
+        ? LeaveStatus.WEEKEND
+        : LeaveStatus.AVAILABLE;
       const holiday = holidayByDate.get(key);
       const userLeave = leaveByDate.get(key);
 
@@ -107,7 +128,10 @@ export class LeaveService {
 
   // Note: user_leave_dates is expected to store leave entries for Topcoder Staff/Administrator users.
   // LeaveAccessGuard enforces that only these roles can consume the aggregated team calendar.
-  async getTeamLeave(startDate?: Date, endDate?: Date): Promise<TeamLeaveResponseDto[]> {
+  async getTeamLeave(
+    startDate?: Date,
+    endDate?: Date,
+  ): Promise<TeamLeaveResponseDto[]> {
     const { start, end } = this.resolveRange(startDate, endDate);
 
     const [leaveRecords, holidays] = await Promise.all([
@@ -125,7 +149,10 @@ export class LeaveService {
 
     leaveRecords.forEach((record) => {
       const key = this.formatDateKey(record.date);
-      const handle = (record.updatedBy as string) || (record.createdBy as string) || record.userId;
+      const handle =
+        (record.updatedBy as string) ||
+        (record.createdBy as string) ||
+        record.userId;
       const users = grouped.get(key) || [];
       users.push({ userId: record.userId, handle, status: record.status });
       grouped.set(key, users);
@@ -149,8 +176,14 @@ export class LeaveService {
     return response;
   }
 
-  async createWiproHolidays(dates: string[], name: string | undefined, createdBy: string) {
-    const parsedDates = dates.map((dateString) => this.parseDateString(dateString));
+  async createWiproHolidays(
+    dates: string[],
+    name: string | undefined,
+    createdBy: string,
+  ) {
+    const parsedDates = dates.map((dateString) =>
+      this.parseDateString(dateString),
+    );
     const now = new Date();
 
     await this.db.wipro_holidays.createMany({
@@ -207,7 +240,9 @@ export class LeaveService {
     }
 
     if (start > end) {
-      throw new BadRequestException("startDate must be before or equal to endDate");
+      throw new BadRequestException(
+        "startDate must be before or equal to endDate",
+      );
     }
 
     return { start, end };

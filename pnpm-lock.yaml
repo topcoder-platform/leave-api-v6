@@ -66,8 +66,8 @@ importers:
         specifier: ^7.8.2
         version: 7.8.2
       tc-core-library-js:
-        specifier: github:appirio-tech/tc-core-library-js#security
-        version: https://codeload.github.com/appirio-tech/tc-core-library-js/tar.gz/87058f286c5b12bc8063956901dd641a1163bf9c
+        specifier: github:topcoder-platform/tc-core-library-js#master
+        version: https://codeload.github.com/topcoder-platform/tc-core-library-js/tar.gz/1075136355e1e1c4779f2138a30f3ffbd718bfa4
     devDependencies:
       '@eslint/eslintrc':
         specifier: ^3.2.0
@@ -3017,8 +3017,8 @@ packages:
     resolution: {integrity: sha512-g9ljZiwki/LfxmQADO3dEY1CbpmXT5Hm2fJ+QaGKwSXUylMybePR7/67YW7jOrrvjEgL1Fmz5kzyAjWVWLlucg==}
     engines: {node: '>=6'}
 
-  tc-core-library-js@https://codeload.github.com/appirio-tech/tc-core-library-js/tar.gz/87058f286c5b12bc8063956901dd641a1163bf9c:
-    resolution: {tarball: https://codeload.github.com/appirio-tech/tc-core-library-js/tar.gz/87058f286c5b12bc8063956901dd641a1163bf9c}
+  tc-core-library-js@https://codeload.github.com/topcoder-platform/tc-core-library-js/tar.gz/1075136355e1e1c4779f2138a30f3ffbd718bfa4:
+    resolution: {tarball: https://codeload.github.com/topcoder-platform/tc-core-library-js/tar.gz/1075136355e1e1c4779f2138a30f3ffbd718bfa4}
     version: 3.0.1
     engines: {node: '>= 14'}
 
@@ -6670,7 +6670,7 @@ snapshots:
 
   tapable@2.3.0: {}
 
-  tc-core-library-js@https://codeload.github.com/appirio-tech/tc-core-library-js/tar.gz/87058f286c5b12bc8063956901dd641a1163bf9c:
+  tc-core-library-js@https://codeload.github.com/topcoder-platform/tc-core-library-js/tar.gz/1075136355e1e1c4779f2138a30f3ffbd718bfa4:
     dependencies:
       axios: 0.30.2
       bunyan: 1.8.15

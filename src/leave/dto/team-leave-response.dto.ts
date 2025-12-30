@@ -11,7 +11,8 @@ export class TeamLeaveUserDto {
 
   @ApiProperty({
     example: "someHandle",
-    description: "User handle or fallback identifier (holiday name when status is WIPRO_HOLIDAY)",
+    description:
+      "User handle or fallback identifier (holiday name when status is WIPRO_HOLIDAY)",
   })
   handle!: string;
 
@@ -26,7 +27,8 @@ export class TeamLeaveUserDto {
 export class TeamLeaveResponseDto {
   @ApiProperty({
     example: "2024-12-24",
-    description: "Calendar date in ISO-8601 format for the combined leave calendar",
+    description:
+      "Calendar date in ISO-8601 format for the combined leave calendar",
   })
   date!: string;
 
@@ -36,7 +38,11 @@ export class TeamLeaveResponseDto {
       'Users on leave for the date; may include a synthetic Wipro holiday entry with userId "wipro-holiday" and status WIPRO_HOLIDAY',
     example: [
       { userId: "12345", handle: "someHandle", status: LeaveStatus.LEAVE },
-      { userId: "wipro-holiday", handle: "Independence Day", status: LeaveStatus.WIPRO_HOLIDAY },
+      {
+        userId: "wipro-holiday",
+        handle: "Independence Day",
+        status: LeaveStatus.WIPRO_HOLIDAY,
+      },
     ],
   })
   usersOnLeave!: TeamLeaveUserDto[];

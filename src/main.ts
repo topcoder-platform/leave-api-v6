@@ -22,7 +22,9 @@ async function bootstrap() {
   // Configure Swagger
   const config = new DocumentBuilder()
     .setTitle("Topcoder Leave Tracker API")
-    .setDescription("API for managing team member leave dates and Wipro holidays")
+    .setDescription(
+      "API for managing team member leave dates and Wipro holidays",
+    )
     .setVersion("6.0")
     .setBasePath("v6/leave")
     .addBearerAuth()

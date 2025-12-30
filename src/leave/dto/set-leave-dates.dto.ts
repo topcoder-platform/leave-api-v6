@@ -1,16 +1,13 @@
 import { ApiProperty } from "@nestjs/swagger";
-import {
-  ArrayMinSize,
-  IsArray,
-  IsDateString,
-  IsEnum,
-} from "class-validator";
+import { ArrayMinSize, IsArray, IsDateString, IsIn } from "class-validator";
 import { LeaveStatus } from "../../db/types";
 
-export enum LeaveUpdateStatus {
-  LEAVE = LeaveStatus.LEAVE,
-  AVAILABLE = LeaveStatus.AVAILABLE,
-}
+export const LEAVE_UPDATE_STATUSES = [
+  LeaveStatus.LEAVE,
+  LeaveStatus.AVAILABLE,
+] as const;
+
+export type LeaveUpdateStatus = (typeof LEAVE_UPDATE_STATUSES)[number];
 
 export class SetLeaveDatesDto {
   @ApiProperty({
@@ -24,10 +21,10 @@ export class SetLeaveDatesDto {
   dates!: string[];
 
   @ApiProperty({
-    enum: LeaveUpdateStatus,
-    example: LeaveUpdateStatus.LEAVE,
+    enum: LEAVE_UPDATE_STATUSES,
+    example: LeaveStatus.LEAVE,
     description: "Desired status for the provided dates",
   })
-  @IsEnum(LeaveUpdateStatus)
+  @IsIn(LEAVE_UPDATE_STATUSES)
   status!: LeaveUpdateStatus;
 }

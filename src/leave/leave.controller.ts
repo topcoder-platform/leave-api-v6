@@ -51,7 +51,10 @@ export class LeaveController {
   @ApiResponse({ status: 400, description: "Invalid date format or status" })
   @ApiResponse({ status: 401, description: "Unauthorized" })
   @ApiResponse({ status: 403, description: "Forbidden" })
-  async setLeaveDates(@Body() dto: SetLeaveDatesDto, @AuthUser() authUser: AuthUser) {
+  async setLeaveDates(
+    @Body() dto: SetLeaveDatesDto,
+    @AuthUser() authUser: AuthUser,
+  ) {
     const result = await this.leaveService.setLeaveDates(
       authUser.userId,
       dto.dates,
@@ -71,7 +74,11 @@ export class LeaveController {
       example: {
         success: true,
         updatedDates: [
-          { userId: "123", date: "2024-12-24T00:00:00.000Z", status: "AVAILABLE" },
+          {
+            userId: "123",
+            date: "2024-12-24T00:00:00.000Z",
+            status: "AVAILABLE",
+          },
         ],
       },
     },
@@ -79,7 +86,10 @@ export class LeaveController {
   @ApiResponse({ status: 400, description: "Invalid date format or status" })
   @ApiResponse({ status: 401, description: "Unauthorized" })
   @ApiResponse({ status: 403, description: "Forbidden" })
-  async updateLeaveDates(@Body() dto: SetLeaveDatesDto, @AuthUser() authUser: AuthUser) {
+  async updateLeaveDates(
+    @Body() dto: SetLeaveDatesDto,
+    @AuthUser() authUser: AuthUser,
+  ) {
     const result = await this.leaveService.setLeaveDates(
       authUser.userId,
       dto.dates,
@@ -93,11 +103,18 @@ export class LeaveController {
   @ApiOperation({ summary: "Get leave calendar for authenticated user" })
   @ApiQuery({ name: "startDate", required: false, type: String })
   @ApiQuery({ name: "endDate", required: false, type: String })
-  @ApiResponse({ status: 200, description: "Leave calendar", type: [LeaveDateResponseDto] })
+  @ApiResponse({
+    status: 200,
+    description: "Leave calendar",
+    type: [LeaveDateResponseDto],
+  })
   @ApiResponse({ status: 400, description: "Invalid date format" })
   @ApiResponse({ status: 401, description: "Unauthorized" })
   @ApiResponse({ status: 403, description: "Forbidden" })
-  async getLeaveDates(@Query() query: GetLeaveDatesQueryDto, @AuthUser("userId") userId: string) {
+  async getLeaveDates(
+    @Query() query: GetLeaveDatesQueryDto,
+    @AuthUser("userId") userId: string,
+  ) {
     const { startDate, endDate } = this.parseDateRange(query);
     return this.leaveService.getLeaveDates(userId, startDate, endDate);
   }
@@ -106,7 +123,7 @@ export class LeaveController {
   @ApiOperation({
     summary: "Get leave calendar for all team members",
     description:
-      "Returns leave records for Topcoder Staff/Administrator users and includes synthetic entries for Wipro holidays (userId \"wipro-holiday\", status WIPRO_HOLIDAY).",
+      'Returns leave records for Topcoder Staff/Administrator users and includes synthetic entries for Wipro holidays (userId "wipro-holiday", status WIPRO_HOLIDAY).',
   })
   @ApiQuery({ name: "startDate", required: false, type: String })
   @ApiQuery({ name: "endDate", required: false, type: String })
@@ -139,12 +156,19 @@ export class LeaveController {
     },
   })
   @ApiResponse({ status: 401, description: "Unauthorized" })
-  @ApiResponse({ status: 403, description: "Only administrators can manage Wipro holidays" })
+  @ApiResponse({
+    status: 403,
+    description: "Only administrators can manage Wipro holidays",
+  })
   async createWiproHolidays(
     @Body() dto: CreateWiproHolidayDto,
     @AuthUser("handle") handle: string,
   ) {
-    const holidays = await this.leaveService.createWiproHolidays(dto.dates, dto.name, handle);
+    const holidays = await this.leaveService.createWiproHolidays(
+      dto.dates,
+      dto.name,
+      handle,
+    );
     return { success: true, holidays };
   }
 
