@@ -19,7 +19,9 @@ export class AdminOnlyGuard implements CanActivate {
     }
 
     if (request.authUser.isMachine) {
-      throw new ForbiddenException("M2M tokens are not allowed for this service");
+      throw new ForbiddenException(
+        "M2M tokens are not allowed for this service",
+      );
     }
 
     const roles = request.authUser.roles || [];
@@ -28,7 +30,9 @@ export class AdminOnlyGuard implements CanActivate {
     );
 
     if (!hasAdminRole) {
-      throw new ForbiddenException("Only administrators can manage Wipro holidays");
+      throw new ForbiddenException(
+        "Only administrators can manage Wipro holidays",
+      );
     }
 
     return true;

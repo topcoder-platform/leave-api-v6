@@ -18,8 +18,7 @@ function decodeTokenPayload(token: string): Record<string, unknown> | null {
       return null;
     }
     const payload = parts[1].replace(/-/g, "+").replace(/_/g, "/");
-    const padded =
-      payload + "=".repeat((4 - (payload.length % 4)) % 4);
+    const padded = payload + "=".repeat((4 - (payload.length % 4)) % 4);
     const decoded = Buffer.from(padded, "base64").toString("utf8");
     return JSON.parse(decoded);
   } catch {

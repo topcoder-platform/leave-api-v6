@@ -32,8 +32,9 @@ export class DbService
   }
 
   enableShutdownHooks(app: INestApplication) {
-    this.$on("beforeExit", async () => {
-      await app.close();
+    // Library engine no longer supports Prisma's beforeExit hook, so listen on process instead
+    process.on("beforeExit", () => {
+      void app.close();
     });
   }
 }
