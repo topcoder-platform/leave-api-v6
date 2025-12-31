@@ -1,4 +1,6 @@
-import { BadRequestException, Injectable } from "@nestjs/common";
+import { BadRequestException, Injectable, Logger } from "@nestjs/common";
+import { Prisma } from "@prisma/client";
+import { randomBytes } from "crypto";
 import {
   eachDayOfInterval,
   endOfMonth,
@@ -17,8 +19,14 @@ import {
   LeaveUpdateStatus,
 } from "./dto/set-leave-dates.dto";
 
+const NANOID_ALPHABET =
+  "ModuleSymbhasOwnPr-0123456789ABCDEFGHNRVfgctiUvz_KqYTJkLxpZXIjQW";
+const NANOID_SIZE = 14;
+
 @Injectable()
 export class LeaveService {
+  private readonly logger = new Logger(LeaveService.name);
+
   constructor(private readonly db: DbService) {}
 
   async setLeaveDates(
@@ -34,27 +42,58 @@ export class LeaveService {
     const parsedDates = dates.map((dateString) =>
       this.parseDateString(dateString),
     );
+    const uniqueDates = this.dedupeDates(parsedDates);
     const statusToPersist: LeaveStatus = status;
 
     try {
       const now = new Date();
+      const existingRecords = await this.db.user_leave_dates.findMany({
+        where: { userId, date: { in: uniqueDates } },
+      });
+      const existingByDate = new Map<
+        string,
+        (typeof existingRecords)[number]
+      >();
+      existingRecords.forEach((record) => {
+        existingByDate.set(this.formatDateKey(record.date), record);
+      });
+
       return await Promise.all(
-        parsedDates.map((date) =>
-          this.db.user_leave_dates.upsert({
-            where: { userId_date: { userId, date } },
-            update: { status: statusToPersist, updatedBy, updatedAt: now },
-            create: {
+        uniqueDates.map((date) => {
+          const key = this.formatDateKey(date);
+          const existing = existingByDate.get(key);
+
+          if (existing) {
+            return this.db.user_leave_dates.update({
+              where: { id: existing.id },
+              data: { status: statusToPersist, updatedBy, updatedAt: now },
+            });
+          }
+
+          return this.db.user_leave_dates.create({
+            data: {
+              id: this.generateId(),
               userId,
               date,
               status: statusToPersist,
               createdBy: updatedBy,
               updatedBy,
+              createdAt: now,
+              updatedAt: now,
             },
-          }),
-        ),
+          });
+        }),
       );
-    } catch {
-      throw new BadRequestException("Failed to set leave dates");
+    } catch (error) {
+      const details = this.describeError(error);
+      this.logger.error(
+        `Failed to set leave dates for user ${userId}. ${JSON.stringify(details)}`,
+        error instanceof Error ? error.stack : undefined,
+      );
+      throw new BadRequestException({
+        message: "Failed to set leave dates",
+        details,
+      });
     }
   }
 
@@ -217,7 +256,13 @@ export class LeaveService {
     if (Number.isNaN(parsed.getTime())) {
       throw new BadRequestException(`Invalid date format: ${dateString}`);
     }
-    return parsed;
+    return new Date(
+      Date.UTC(
+        parsed.getUTCFullYear(),
+        parsed.getUTCMonth(),
+        parsed.getUTCDate(),
+      ),
+    );
   }
 
   private resolveRange(startDate?: Date, endDate?: Date) {
@@ -250,5 +295,52 @@ export class LeaveService {
 
   private formatDateKey(date: Date) {
     return date.toISOString().split("T")[0];
+  }
+
+  private dedupeDates(dates: Date[]): Date[] {
+    const seen = new Set<string>();
+    const unique: Date[] = [];
+
+    dates.forEach((date) => {
+      const key = this.formatDateKey(date);
+      if (seen.has(key)) {
+        return;
+      }
+      seen.add(key);
+      unique.push(date);
+    });
+
+    return unique;
+  }
+
+  private generateId(): string {
+    const bytes = randomBytes(NANOID_SIZE);
+    let id = "";
+
+    for (let i = 0; i < NANOID_SIZE; i += 1) {
+      id += NANOID_ALPHABET[bytes[i] & 63];
+    }
+
+    return id;
+  }
+
+  private describeError(error: unknown) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError) {
+      return {
+        message: error.message,
+        code: error.code,
+        meta: (error.meta ?? undefined) as Record<string, unknown> | undefined,
+      };
+    }
+
+    if (error instanceof Prisma.PrismaClientValidationError) {
+      return { message: error.message };
+    }
+
+    if (error instanceof Error) {
+      return { message: error.message };
+    }
+
+    return { message: "Unknown error" };
   }
 }

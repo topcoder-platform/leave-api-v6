@@ -55,11 +55,12 @@ export class LeaveController {
     @Body() dto: SetLeaveDatesDto,
     @AuthUser() authUser: AuthUser,
   ) {
+    const actor = authUser.handle ?? authUser.userId;
     const result = await this.leaveService.setLeaveDates(
       authUser.userId,
       dto.dates,
       dto.status,
-      authUser.handle,
+      actor,
     );
     return { success: true, updatedDates: result };
   }
@@ -90,11 +91,12 @@ export class LeaveController {
     @Body() dto: SetLeaveDatesDto,
     @AuthUser() authUser: AuthUser,
   ) {
+    const actor = authUser.handle ?? authUser.userId;
     const result = await this.leaveService.setLeaveDates(
       authUser.userId,
       dto.dates,
       dto.status,
-      authUser.handle,
+      actor,
     );
     return { success: true, updatedDates: result };
   }

@@ -18,10 +18,18 @@ export const AuthUser = createParamDecorator(
       return undefined;
     }
 
+    const normalizedUserId =
+      authUser.userId !== undefined && authUser.userId !== null
+        ? String(authUser.userId)
+        : authUser.userId;
+
     if (data) {
+      if (data === "userId") {
+        return normalizedUserId;
+      }
       return (authUser as Record<string, unknown>)[data];
     }
 
-    return authUser;
+    return { ...authUser, userId: normalizedUserId };
   },
 );
