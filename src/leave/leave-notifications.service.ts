@@ -1,6 +1,8 @@
 import { Injectable, Logger } from "@nestjs/common";
 import { Cron } from "@nestjs/schedule";
 import { ConfigService } from "@nestjs/config";
+import { Prisma } from "@prisma/client";
+import { createHash } from "crypto";
 import { DbService } from "../db/db.service";
 import { LeaveStatus } from "../db/types";
 import { UserRoles } from "../app-constants";
@@ -92,7 +94,18 @@ export class LeaveNotificationsService {
 
   @Cron("0 0 * * 1-5", { timeZone: "UTC" })
   async sendDailyLeaveSlackSummary(): Promise<void> {
-    const { start, end } = this.getUtcDayRange(new Date());
+    const now = new Date();
+    const lockId = this.buildDailySlackSummaryLockId(now);
+    const lockAcquired = await this.tryAcquireAdvisoryLock(lockId);
+
+    if (!lockAcquired) {
+      this.logger.warn(
+        "Skipping daily leave Slack summary because another instance is running.",
+      );
+      return;
+    }
+
+    const { start, end } = this.getUtcDayRange(now);
 
     try {
       const leaveRecords = await this.db.user_leave_dates.findMany({
@@ -117,6 +130,8 @@ export class LeaveNotificationsService {
         "Failed to send daily leave Slack summary.",
         error instanceof Error ? error.stack : undefined,
       );
+    } finally {
+      await this.releaseAdvisoryLock(lockId);
     }
   }
 
@@ -168,5 +183,46 @@ export class LeaveNotificationsService {
       "These users are on leave today:",
       ...handles.map((handle) => `* ${handle}`),
     ].join("\n");
+  }
+
+  private buildDailySlackSummaryLockId(date: Date): bigint {
+    const dayKey = date.toISOString().slice(0, 10);
+    const hash = createHash("sha256")
+      .update(`leave-api-v6:daily-slack-summary:${dayKey}`)
+      .digest("hex")
+      .slice(0, 16);
+
+    return BigInt.asIntN(64, BigInt(`0x${hash || "0"}`));
+  }
+
+  private async tryAcquireAdvisoryLock(lockId: bigint): Promise<boolean> {
+    try {
+      const rows = await this.db.$queryRaw<Array<{ acquired: boolean }>>(
+        Prisma.sql`SELECT pg_try_advisory_lock(${lockId}) AS acquired`,
+      );
+
+      return Boolean(rows[0]?.acquired);
+    } catch (error) {
+      const err = error as Error;
+      this.logger.error(
+        "Failed to acquire advisory lock for daily leave Slack summary.",
+        err.stack,
+      );
+      return false;
+    }
+  }
+
+  private async releaseAdvisoryLock(lockId: bigint): Promise<void> {
+    try {
+      await this.db.$queryRaw(
+        Prisma.sql`SELECT pg_advisory_unlock(${lockId})`,
+      );
+    } catch (error) {
+      const err = error as Error;
+      this.logger.warn(
+        "Failed to release advisory lock for daily leave Slack summary.",
+        err.stack,
+      );
+    }
   }
 }
