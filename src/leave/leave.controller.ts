@@ -19,9 +19,11 @@ import {
 import { AuthUser } from "../auth/decorators/auth-user.decorator";
 import { AdminOnlyGuard } from "../auth/guards/admin-only.guard";
 import { LeaveAccessGuard } from "../auth/guards/leave-access.guard";
+import { SlackService } from "../integrations/slack.service";
 import { CreateWiproHolidayDto } from "./dto/create-wipro-holiday.dto";
 import { GetLeaveDatesQueryDto } from "./dto/get-leave-dates-query.dto";
 import { LeaveDateResponseDto } from "./dto/leave-date-response.dto";
+import { SlackTestMessageDto } from "./dto/slack-test-message.dto";
 import { SetLeaveDatesDto } from "./dto/set-leave-dates.dto";
 import { TeamLeaveResponseDto } from "./dto/team-leave-response.dto";
 import { LeaveService } from "./leave.service";
@@ -31,7 +33,10 @@ import { LeaveService } from "./leave.service";
 @ApiBearerAuth()
 @UseGuards(LeaveAccessGuard)
 export class LeaveController {
-  constructor(private readonly leaveService: LeaveService) {}
+  constructor(
+    private readonly leaveService: LeaveService,
+    private readonly slackService: SlackService,
+  ) {}
 
   @Post("/dates")
   @ApiOperation({ summary: "Set leave dates for authenticated user" })
@@ -55,11 +60,12 @@ export class LeaveController {
     @Body() dto: SetLeaveDatesDto,
     @AuthUser() authUser: AuthUser,
   ) {
+    const actor = authUser.handle ?? authUser.userId;
     const result = await this.leaveService.setLeaveDates(
       authUser.userId,
       dto.dates,
       dto.status,
-      authUser.handle,
+      actor,
     );
     return { success: true, updatedDates: result };
   }
@@ -90,11 +96,12 @@ export class LeaveController {
     @Body() dto: SetLeaveDatesDto,
     @AuthUser() authUser: AuthUser,
   ) {
+    const actor = authUser.handle ?? authUser.userId;
     const result = await this.leaveService.setLeaveDates(
       authUser.userId,
       dto.dates,
       dto.status,
-      authUser.handle,
+      actor,
     );
     return { success: true, updatedDates: result };
   }
@@ -170,6 +177,39 @@ export class LeaveController {
       handle,
     );
     return { success: true, holidays };
+  }
+
+  @Post("/slack/test")
+  @ApiOperation({ summary: "Send a test Slack message" })
+  @ApiBody({ type: SlackTestMessageDto })
+  @ApiResponse({
+    status: 200,
+    description: "Slack test message sent",
+    schema: {
+      example: {
+        success: true,
+        message:
+          "Slack test message from Leave API by jane_doe at 2024-12-20T12:34:56.789Z.",
+      },
+    },
+  })
+  @ApiResponse({ status: 401, description: "Unauthorized" })
+  @ApiResponse({ status: 403, description: "Forbidden" })
+  @ApiResponse({ status: 502, description: "Slack API error" })
+  @ApiResponse({ status: 503, description: "Slack is not configured" })
+  async sendSlackTestMessage(
+    @Body() dto: SlackTestMessageDto,
+    @AuthUser() authUser: AuthUser,
+  ) {
+    const actor = authUser.handle ?? authUser.userId;
+    const timestamp = new Date().toISOString();
+    const customMessage = dto?.message?.trim();
+    const message = customMessage
+      ? `Slack test message from Leave API by ${actor} at ${timestamp}. Message: ${customMessage}`
+      : `Slack test message from Leave API by ${actor} at ${timestamp}.`;
+
+    await this.slackService.sendTestNotification(message);
+    return { success: true, message };
   }
 
   private parseDateRange(query: GetLeaveDatesQueryDto) {
