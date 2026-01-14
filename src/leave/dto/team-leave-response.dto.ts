@@ -19,7 +19,8 @@ export class TeamLeaveUserDto {
   @ApiProperty({
     enum: LeaveStatus,
     example: LeaveStatus.LEAVE,
-    description: "Leave status; WIPRO_HOLIDAY indicates a Wipro holiday entry",
+    description:
+      "Leave status; HOLIDAY indicates a personal holiday entry and WIPRO_HOLIDAY indicates a Wipro holiday entry",
   })
   status!: LeaveStatus;
 }
@@ -35,9 +36,10 @@ export class TeamLeaveResponseDto {
   @ApiProperty({
     type: [TeamLeaveUserDto],
     description:
-      'Users on leave for the date; may include a synthetic Wipro holiday entry with userId "wipro-holiday" and status WIPRO_HOLIDAY',
+      'Users on leave for the date; may include a personal holiday entry or a synthetic Wipro holiday entry with userId "wipro-holiday" and status WIPRO_HOLIDAY',
     example: [
       { userId: "12345", handle: "someHandle", status: LeaveStatus.LEAVE },
+      { userId: "67890", handle: "anotherHandle", status: LeaveStatus.HOLIDAY },
       {
         userId: "wipro-holiday",
         handle: "Independence Day",

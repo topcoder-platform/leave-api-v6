@@ -4,6 +4,7 @@ import { LeaveStatus } from "../../db/types";
 
 export const LEAVE_UPDATE_STATUSES = [
   LeaveStatus.LEAVE,
+  LeaveStatus.HOLIDAY,
   LeaveStatus.AVAILABLE,
 ] as const;
 

@@ -36,7 +36,7 @@ export class LeaveService {
     updatedBy: string,
   ) {
     if (!LEAVE_UPDATE_STATUSES.includes(status)) {
-      throw new BadRequestException("Status must be LEAVE or AVAILABLE");
+      throw new BadRequestException("Status must be LEAVE, HOLIDAY, or AVAILABLE");
     }
 
     const parsedDates = dates.map((dateString) =>
@@ -165,7 +165,7 @@ export class LeaveService {
     return calendar;
   }
 
-  // Note: user_leave_dates is expected to store leave entries for Topcoder Staff/Administrator users.
+  // Note: user_leave_dates is expected to store leave or personal holiday entries for Topcoder Staff/Administrator users.
   // LeaveAccessGuard enforces that only these roles can consume the aggregated team calendar.
   async getTeamLeave(
     startDate?: Date,
@@ -175,7 +175,10 @@ export class LeaveService {
 
     const [leaveRecords, holidays] = await Promise.all([
       this.db.user_leave_dates.findMany({
-        where: { date: { gte: start, lte: end }, status: LeaveStatus.LEAVE },
+        where: {
+          date: { gte: start, lte: end },
+          status: { in: [LeaveStatus.LEAVE, LeaveStatus.HOLIDAY] },
+        },
         orderBy: { date: "asc" },
       }),
       this.db.wipro_holidays.findMany({

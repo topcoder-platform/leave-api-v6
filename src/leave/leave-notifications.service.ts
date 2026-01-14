@@ -111,7 +111,7 @@ export class LeaveNotificationsService {
       const leaveRecords = await this.db.user_leave_dates.findMany({
         where: {
           date: { gte: start, lte: end },
-          status: LeaveStatus.LEAVE,
+          status: { in: [LeaveStatus.LEAVE, LeaveStatus.HOLIDAY] },
         },
       });
 
