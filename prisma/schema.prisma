@@ -11,6 +11,7 @@ datasource db {
 enum LeaveStatus {
   AVAILABLE
   LEAVE
+  HOLIDAY
   WIPRO_HOLIDAY
   WEEKEND
 }

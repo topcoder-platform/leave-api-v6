@@ -130,14 +130,14 @@ export class LeaveController {
   @ApiOperation({
     summary: "Get leave calendar for all team members",
     description:
-      'Returns leave records for Topcoder Staff/Administrator users and includes synthetic entries for Wipro holidays (userId "wipro-holiday", status WIPRO_HOLIDAY).',
+      'Returns leave and personal holiday records for Topcoder Staff/Administrator users and includes synthetic entries for Wipro holidays (userId "wipro-holiday", status WIPRO_HOLIDAY).',
   })
   @ApiQuery({ name: "startDate", required: false, type: String })
   @ApiQuery({ name: "endDate", required: false, type: String })
   @ApiResponse({
     status: 200,
     description:
-      "Team leave calendar for Topcoder Staff/Administrator users; holidays appear as synthetic Wipro holiday entries in usersOnLeave",
+      "Team leave calendar for Topcoder Staff/Administrator users; holidays appear as personal holiday entries or synthetic Wipro holiday entries in usersOnLeave",
     type: [TeamLeaveResponseDto],
   })
   @ApiResponse({ status: 400, description: "Invalid date format" })
