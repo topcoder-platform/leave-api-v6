@@ -25,4 +25,4 @@ Optional:
 * `IDENTITY_ROLE_MEMBER_PAGE_SIZE` (default 200)
 * `LEAVE_REMINDER_MONTH_OFFSET` (default 1 to target next month)
 * `SLACK_BOT_KEY`, `SLACK_CHANNEL_ID` (Slack notifications)
-* `ENV_NAME` (prefix for Slack messages; default `DEV`)
+* `ENV_NAME` (Slack prefix label; prefix suppressed when `ENV_NAME` is `PROD`/`PRODUCTION`, or when `NODE_ENV` is production and `ENV_NAME` is unset)
