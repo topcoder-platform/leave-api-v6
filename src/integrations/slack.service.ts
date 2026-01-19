@@ -27,6 +27,7 @@ export class SlackService {
   private readonly slackChannelId: string;
   private readonly slackApiUrl = "https://slack.com/api/chat.postMessage";
   private readonly topcoderEnv: string;
+  private readonly includeEnvPrefix: boolean;
 
   constructor(
     private readonly configService: ConfigService,
@@ -35,7 +36,13 @@ export class SlackService {
     this.slackBotKey = this.configService.get<string>("SLACK_BOT_KEY") || "";
     this.slackChannelId =
       this.configService.get<string>("SLACK_CHANNEL_ID") || "";
-    this.topcoderEnv = this.configService.get<string>("ENV_NAME", "DEV");
+    const configuredEnv =
+      this.configService.get<string>("ENV_NAME")?.trim() || "";
+    const nodeEnv = this.configService.get<string>("NODE_ENV")?.trim() || "";
+    this.topcoderEnv = configuredEnv || "DEV";
+    this.includeEnvPrefix = configuredEnv
+      ? !this.isProductionEnv(configuredEnv)
+      : !this.isProductionEnv(nodeEnv);
 
     if (!this.slackBotKey || !this.slackChannelId) {
       this.logger.error(
@@ -132,11 +139,16 @@ export class SlackService {
   }
 
   private buildPayload(message: string): SlackMessagePayload {
-    const prefix = `[${this.topcoderEnv}]`;
+    const prefix = this.includeEnvPrefix ? `[${this.topcoderEnv}] ` : "";
     return {
       channel: this.slackChannelId,
-      text: `${prefix} ${message}`,
+      text: `${prefix}${message}`,
     };
+  }
+
+  private isProductionEnv(envValue: string): boolean {
+    const normalized = envValue.trim().toLowerCase();
+    return normalized === "prod" || normalized === "production";
   }
 
   private postMessage(payload: SlackMessagePayload) {
