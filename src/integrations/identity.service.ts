@@ -10,6 +10,13 @@ export interface IdentityRoleMember {
   email: string;
 }
 
+export interface IdentityUserProfile {
+  userId: string;
+  handle?: string;
+  firstName?: string;
+  lastName?: string;
+}
+
 @Injectable()
 export class IdentityService {
   private readonly logger = new Logger(IdentityService.name);
@@ -28,6 +35,38 @@ export class IdentityService {
       return [];
     }
     return this.listRoleMembers(roleId, token);
+  }
+
+  async getUsersByIds(userIds: string[]): Promise<IdentityUserProfile[]> {
+    const uniqueIds = Array.from(
+      new Set(userIds.map((userId) => String(userId)).filter(Boolean)),
+    ).filter((userId) => Number.isFinite(Number(userId)));
+
+    if (uniqueIds.length === 0) {
+      return [];
+    }
+
+    const token = await this.m2mService.getM2MToken();
+    const selector = "id,handle,firstName,lastName";
+    const profiles: IdentityUserProfile[] = [];
+    const batchSize = 10;
+
+    for (let i = 0; i < uniqueIds.length; i += batchSize) {
+      const batch = uniqueIds.slice(i, i + batchSize);
+      const results = await Promise.all(
+        batch.map((userId) =>
+          this.fetchUserProfileById(userId, token, selector),
+        ),
+      );
+
+      results.forEach((result) => {
+        if (result) {
+          profiles.push(result);
+        }
+      });
+    }
+
+    return profiles;
   }
 
   private getIdentityApiUrl(): string {
@@ -83,6 +122,49 @@ export class IdentityService {
     }
 
     return roleId;
+  }
+
+  private async fetchUserProfileById(
+    userId: string,
+    token: string,
+    selector: string,
+  ): Promise<IdentityUserProfile | null> {
+    const id = Number(userId);
+    if (!Number.isFinite(id)) {
+      return null;
+    }
+
+    const url = this.buildUrl(
+      `/users?filter=id=${id}&selector=${selector}`,
+    );
+
+    try {
+      const response = await firstValueFrom(
+        this.httpService.get(url, {
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+      );
+
+      const data = Array.isArray(response.data) ? response.data : [];
+      const record = data[0];
+
+      if (!record) {
+        return null;
+      }
+
+      return {
+        userId: String(record.id ?? userId),
+        handle: record.handle,
+        firstName: record.firstName,
+        lastName: record.lastName,
+      };
+    } catch (error) {
+      this.logger.warn(
+        `Failed to fetch user profile for id ${userId}.`,
+        error instanceof Error ? error.stack : undefined,
+      );
+      return null;
+    }
   }
 
   private resolvePerPage(): number {
