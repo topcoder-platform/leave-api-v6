@@ -9,6 +9,10 @@ import {
 } from "date-fns";
 import { DbService } from "../db/db.service";
 import { LeaveStatus } from "../db/types";
+import {
+  IdentityService,
+  IdentityUserProfile,
+} from "../integrations/identity.service";
 import { LeaveDateResponseDto } from "./dto/leave-date-response.dto";
 import {
   TeamLeaveResponseDto,
@@ -27,7 +31,10 @@ const NANOID_SIZE = 14;
 export class LeaveService {
   private readonly logger = new Logger(LeaveService.name);
 
-  constructor(private readonly db: DbService) {}
+  constructor(
+    private readonly db: DbService,
+    private readonly identityService: IdentityService,
+  ) {}
 
   async setLeaveDates(
     userId: string,
@@ -188,15 +195,46 @@ export class LeaveService {
     ]);
 
     const grouped = new Map<string, TeamLeaveUserDto[]>();
+    const userIds = Array.from(
+      new Set(
+        leaveRecords
+          .map((record) => String(record.userId))
+          .filter(Boolean),
+      ),
+    );
+    let userProfiles: IdentityUserProfile[] = [];
+
+    if (userIds.length > 0) {
+      try {
+        userProfiles = await this.identityService.getUsersByIds(userIds);
+      } catch (error) {
+        this.logger.warn(
+          "Failed to fetch user profiles for team leave calendar.",
+          error instanceof Error ? error.stack : undefined,
+        );
+      }
+    }
+
+    const userProfileById = new Map(
+      userProfiles.map((profile) => [profile.userId, profile]),
+    );
 
     leaveRecords.forEach((record) => {
       const key = this.formatDateKey(record.date);
-      const handle =
+      const profile = userProfileById.get(record.userId);
+      const fallbackHandle =
         (record.updatedBy as string) ||
         (record.createdBy as string) ||
         record.userId;
+      const handle = profile?.handle || fallbackHandle;
       const users = grouped.get(key) || [];
-      users.push({ userId: record.userId, handle, status: record.status });
+      users.push({
+        userId: record.userId,
+        handle,
+        firstName: profile?.firstName,
+        lastName: profile?.lastName,
+        status: record.status,
+      });
       grouped.set(key, users);
     });
 

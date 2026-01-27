@@ -13,6 +13,7 @@ import {
 import {
   IdentityRoleMember,
   IdentityService,
+  IdentityUserProfile,
 } from "../integrations/identity.service";
 import { SlackService } from "../integrations/slack.service";
 
@@ -115,15 +116,47 @@ export class LeaveNotificationsService {
         },
       });
 
-      const handles = leaveRecords.map((record) =>
-        String(record.updatedBy || record.createdBy || record.userId),
-      );
+      const fallbackByUserId = new Map<string, string>();
 
-      const uniqueHandles = Array.from(new Set(handles)).sort((a, b) =>
-        a.localeCompare(b),
-      );
+      leaveRecords.forEach((record) => {
+        const userId = String(record.userId);
+        if (!userId || fallbackByUserId.has(userId)) {
+          return;
+        }
 
-      const message = this.buildSlackMessage(uniqueHandles);
+        const fallbackHandle = String(
+          record.updatedBy || record.createdBy || record.userId,
+        );
+        fallbackByUserId.set(userId, fallbackHandle);
+      });
+
+      const userIds = Array.from(fallbackByUserId.keys());
+      let userProfiles: IdentityUserProfile[] = [];
+
+      if (userIds.length > 0) {
+        try {
+          userProfiles = await this.identityService.getUsersByIds(userIds);
+        } catch (error) {
+          this.logger.warn(
+            "Failed to fetch user profiles for daily leave Slack summary.",
+            error instanceof Error ? error.stack : undefined,
+          );
+        }
+      }
+
+      const userProfileById = new Map(
+        userProfiles.map((profile) => [profile.userId, profile]),
+      );
+      const displayNames = userIds
+        .map((userId) =>
+          this.getDisplayName(
+            userProfileById.get(userId),
+            fallbackByUserId.get(userId) ?? userId,
+          ),
+        )
+        .sort((a, b) => a.localeCompare(b, undefined, { sensitivity: "base" }));
+
+      const message = this.buildSlackMessage(displayNames);
       await this.slackService.sendNotification(message);
     } catch (error) {
       this.logger.error(
@@ -174,15 +207,30 @@ export class LeaveNotificationsService {
     return Array.from(new Set(emails.map((email) => email.toLowerCase())));
   }
 
-  private buildSlackMessage(handles: string[]): string {
-    if (handles.length === 0) {
+  private buildSlackMessage(names: string[]): string {
+    if (names.length === 0) {
       return "These users are on leave today:\n* None";
     }
 
     return [
       "These users are on leave today:",
-      ...handles.map((handle) => `* ${handle}`),
+      ...names.map((name) => `* ${name}`),
     ].join("\n");
+  }
+
+  private getDisplayName(
+    profile: IdentityUserProfile | undefined,
+    fallback: string,
+  ): string {
+    const firstName = profile?.firstName?.trim();
+    const lastName = profile?.lastName?.trim();
+    const fullName = [firstName, lastName].filter(Boolean).join(" ");
+
+    if (fullName) {
+      return fullName;
+    }
+
+    return profile?.handle || fallback;
   }
 
   private buildDailySlackSummaryLockId(date: Date): bigint {
