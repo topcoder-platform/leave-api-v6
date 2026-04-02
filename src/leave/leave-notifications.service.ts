@@ -36,9 +36,9 @@ export class LeaveNotificationsService {
   @Cron("*/15 * * * *", { timeZone: "UTC" })
   async sendMonthlyLeaveReminder(): Promise<void> {
     const now = new Date();
-    if (!this.isLastUtcDayOfMonth(now)) {
-      return;
-    }
+    // if (!this.isLastUtcDayOfMonth(now)) {
+    //   return;
+    // }
 
     const templateId = this.configService.get<string>(
       "SENDGRID_LEAVE_REMINDER_TEMPLATE_ID",
