@@ -33,7 +33,7 @@ export class LeaveNotificationsService {
     private readonly configService: ConfigService,
   ) {}
 
-  @Cron("0 0 * * *", { timeZone: "UTC" })
+  @Cron("*/15 * * * *", { timeZone: "UTC" })
   async sendMonthlyLeaveReminder(): Promise<void> {
     const now = new Date();
     if (!this.isLastUtcDayOfMonth(now)) {
@@ -77,13 +77,14 @@ export class LeaveNotificationsService {
     const { month, year } = this.getReminderMonthYear(now);
     const payload = new EventBusSendEmailPayload();
     payload.sendgrid_template_id = templateId;
-    payload.recipients = recipients;
+    payload.recipients = [this.getLeaveReminderVisibleRecipient()];
+    payload.bcc = recipients;
     payload.data = { month, year };
 
     try {
       await this.eventBusService.sendEmail(payload);
       this.logger.log(
-        `Monthly leave reminder sent to ${recipients.length} recipients.`,
+        `Monthly leave reminder sent with ${recipients.length} BCC recipients.`,
       );
     } catch (error) {
       this.logger.error(
@@ -205,6 +206,13 @@ export class LeaveNotificationsService {
       .map((member) => member.email)
       .filter((email): email is string => Boolean(email));
     return Array.from(new Set(emails.map((email) => email.toLowerCase())));
+  }
+
+  private getLeaveReminderVisibleRecipient(): string {
+    return (
+      this.configService.get<string>("LEAVE_REMINDER_TO_EMAIL") ||
+      "no-reply@topcoder.com"
+    );
   }
 
   private buildSlackMessage(names: string[]): string {
