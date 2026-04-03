@@ -24,6 +24,7 @@ export class EventBusSendEmailPayload {
   version: string = "v3";
   sendgrid_template_id!: string;
   recipients!: string[];
+  bcc?: string[];
 }
 
 @Injectable()
