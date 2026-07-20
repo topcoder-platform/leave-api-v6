@@ -1,40 +1,31 @@
-# ---- Base Stage ----
-FROM node:22-alpine AS base
+# syntax=docker/dockerfile:1.7
+
+ARG NODE_VERSION=26.5.0
+ARG PNPM_VERSION=11.15.1
+
+FROM node:${NODE_VERSION}-alpine AS build
+
+RUN apk upgrade --no-cache
+
 WORKDIR /usr/src/app
-
-# ---- Dependencies Stage ----
-FROM base AS deps
-# Install pnpm
-RUN npm install -g pnpm
-# Copy dependency-defining files
-COPY package.json pnpm-lock.yaml ./
-# Install dependencies
-RUN pnpm install --frozen-lockfile
-COPY prisma ./prisma
-RUN DATABASE_URL="postgresql://user:pass@localhost:5432/db?schema=public" pnpm prisma generate
-
-# ---- Build Stage ----
-FROM base AS build
-RUN npm install -g pnpm
-COPY --from=deps /usr/src/app/node_modules ./node_modules
 COPY . .
-# Build the application
-RUN pnpm build
+RUN npm install --global pnpm@${PNPM_VERSION}
+RUN pnpm install --frozen-lockfile
+RUN pnpm run lint
+RUN pnpm run build
+RUN pnpm prune --prod --ignore-scripts
 
-# ---- Production Dependencies ----
-FROM deps AS prod-deps
-RUN pnpm prune --prod
+FROM node:${NODE_VERSION}-alpine AS production
 
-# ---- Production Stage ----
-FROM base AS production
+RUN apk upgrade --no-cache \
+    && rm -rf /usr/local/lib/node_modules/npm \
+    && rm -f /usr/local/bin/npm /usr/local/bin/npx
+
+WORKDIR /usr/src/app
 ENV NODE_ENV=production
-# Copy built application from the build stage
 COPY --from=build /usr/src/app/dist ./dist
-# Copy production dependencies from the deps stage
-COPY --from=prod-deps /usr/src/app/node_modules ./node_modules
+COPY --from=build /usr/src/app/node_modules ./node_modules
+COPY --from=build /usr/src/app/package.json ./package.json
 
-# Expose the application port
 EXPOSE 3000
-
-# The command to run the application
 CMD ["node", "dist/main.js"]
