@@ -2,6 +2,10 @@
 
 Simple service used for the leave-tracker.topcoder.com app that staff and contractors use to set their leave dates during the year.
 
+## Development runtime
+
+Use Node.js 26.5.0 and pnpm 11.15.1. Run `nvm use` in this project before running pnpm commands.
+
 ## Deployment
 
 * Set the DATABASE_URL and run the app using `pnpm start:dev`
