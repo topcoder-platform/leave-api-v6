@@ -2,6 +2,10 @@
 
 Simple service used for the leave-tracker.topcoder.com app that staff and contractors use to set their leave dates during the year.
 
+## Development runtime
+
+Use Node.js 26.5.0 and pnpm 11.15.1. Run `nvm use` in this project before running pnpm commands.
+
 ## Deployment
 
 * Set the DATABASE_URL and run the app using `pnpm start:dev`
@@ -24,5 +28,6 @@ Optional:
 * `M2M_AUTH_PROXY_SERVER_URL`
 * `IDENTITY_ROLE_MEMBER_PAGE_SIZE` (default 200)
 * `LEAVE_REMINDER_MONTH_OFFSET` (default 1 to target next month)
+* `LEAVE_REMINDER_TO_EMAIL` (default `no-reply@topcoder.com`; used as visible `To` while staff recipients are sent via BCC)
 * `SLACK_BOT_KEY`, `SLACK_CHANNEL_ID` (Slack notifications)
 * `ENV_NAME` (Slack prefix label; prefix suppressed when `ENV_NAME` is `PROD`/`PRODUCTION`, or when `NODE_ENV` is production and `ENV_NAME` is unset)
