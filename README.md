@@ -22,12 +22,17 @@ Required:
 * `BUS_API_URL` (or `BUSAPI_URL`) for the Topcoder Bus API endpoint.
 * `IDENTITY_API_URL` (base URL for Identity API, e.g. `https://api.topcoder-dev.com/v6`).
 * `SENDGRID_LEAVE_REMINDER_TEMPLATE_ID` (Sendgrid template for monthly reminders).
-* `M2M_AUTH_URL`, `M2M_AUTH_AUDIENCE`, `M2M_AUTH_CLIENT_ID`, `M2M_AUTH_CLIENT_SECRET` (M2M credentials with `read:roles` scope).
+* Explicit `M2M_PROVIDER=keycloak`, issuer, audience, token URL and client credentials from `.env.example` (client approved for `read:roles`).
 
 Optional:
-* `M2M_AUTH_PROXY_SERVER_URL`
+* `KEYCLOAK_SCOPE` (optional narrower approved scopes).
 * `IDENTITY_ROLE_MEMBER_PAGE_SIZE` (default 200)
 * `LEAVE_REMINDER_MONTH_OFFSET` (default 1 to target next month)
 * `LEAVE_REMINDER_TO_EMAIL` (default `no-reply@topcoder.com`; used as visible `To` while staff recipients are sent via BCC)
 * `SLACK_BOT_KEY`, `SLACK_CHANNEL_ID` (Slack notifications)
 * `ENV_NAME` (Slack prefix label; prefix suppressed when `ENV_NAME` is `PROD`/`PRODUCTION`, or when `NODE_ENV` is production and `ENV_NAME` is unset)
+
+## Keycloak migration branch
+
+On `keycloak_m2M`, follow [Keycloak configuration and rollout](docs/keycloak-m2m.md).
+Legacy Auth0 M2M settings below do not configure token issuance on this branch.
