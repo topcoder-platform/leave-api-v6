@@ -5,6 +5,8 @@ ARG PNPM_VERSION=11.15.1
 
 FROM node:${NODE_VERSION}-alpine AS build
 
+ARG PNPM_VERSION
+
 RUN apk upgrade --no-cache
 
 WORKDIR /usr/src/app
@@ -19,8 +21,9 @@ FROM alpine:3.24 AS production
 
 ARG NODE_VERSION
 
+# Alpine replaces older package revisions; accept updates within the build's Node major.
 RUN apk upgrade --no-cache \
-    && apk add --no-cache nodejs-current=${NODE_VERSION}-r0 \
+    && apk add --no-cache "nodejs-current~${NODE_VERSION%%.*}" \
     && addgroup --system --gid 10001 app \
     && adduser --system --uid 10001 --ingroup app --home /usr/src/app app
 
