@@ -6,7 +6,7 @@ Simple service used for the leave-tracker.topcoder.com app that staff and contra
 
 Use Node.js 26.5.1 and pnpm 11.15.1. Run `nvm use` in this project before running pnpm commands.
 
-The production container uses Alpine's dynamically linked Node.js package and runs as the unprivileged `app` user (UID/GID 10001).
+The production container uses Alpine 3.24's dynamically linked `nodejs-current` package, accepting updates within the build's Node.js major version (26). Its minor/patch version can differ from the pinned build version because Alpine replaces older package revisions. It runs as the unprivileged `app` user (UID/GID 10001).
 
 ## Deployment
 
