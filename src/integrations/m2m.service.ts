@@ -19,7 +19,7 @@ export class M2mService {
     const proxyUrl =
       this.configService.get<string>("M2M_AUTH_PROXY_SERVER_URL") || undefined;
 
-    this.m2m = core.auth.m2m({
+    this.m2m = core.createM2MClient({
       AUTH0_URL: authUrl,
       AUTH0_AUDIENCE: audience,
       AUTH0_PROXY_SERVER_URL: proxyUrl,
