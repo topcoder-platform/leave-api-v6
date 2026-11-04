@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 2,
+  "environment": "prod",
+  "accountId": "409275337247",
+  "region": "us-east-1",
+  "deployRoleArn": "arn:aws:iam::409275337247:role/leave-api-v6-prod-deploy",
+  "taskRoleArn": null,
+  "executionRoleArn": "arn:aws:iam::409275337247:role/ecsTaskExecutionRole",
+  "cluster": "internal-api-serverless",
+  "service": "leave-api-v6",
+  "taskFamily": "leave-api-v6",
+  "circleciOrgId": "947bef5e-1669-415d-b83c-4fc85155b7df",
+  "circleciProjectId": "84e80d0f-771f-4a22-855e-4f636d53228b",
+  "repository": "github.com/topcoder-platform/leave-api-v6",
+  "branch": "master",
+  "images": {
+    "leave-api-v6": "leave-api-v6"
+  }
+}
