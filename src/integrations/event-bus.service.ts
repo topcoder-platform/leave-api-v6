@@ -1,12 +1,11 @@
+import { createBusApiClient } from 'tc-core-library-js';
 import {
-  HttpStatus,
   Injectable,
   InternalServerErrorException,
   Logger,
 } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { HttpService } from "@nestjs/axios";
-import { firstValueFrom } from "rxjs";
 import { M2mService } from "./m2m.service";
 
 class EventBusMessage<T> {
@@ -46,7 +45,6 @@ export class EventBusService {
   }
 
   private async postMessage<T>(topic: string, payload: T): Promise<void> {
-    const token = await this.m2mService.getM2MToken();
     const msg = new EventBusMessage<T>();
     msg.topic = topic;
     msg.originator = "leave-api-v6";
@@ -55,19 +53,10 @@ export class EventBusService {
     const url = this.getBusApiUrl();
 
     try {
-      const response = await firstValueFrom(
-        this.httpService.post(url, msg, {
-          headers: { Authorization: `Bearer ${token}` },
-        }),
-      );
-      const status = response.status as HttpStatus;
-      if (
-        status !== HttpStatus.OK &&
-        status !== HttpStatus.NO_CONTENT &&
-        status !== HttpStatus.ACCEPTED
-      ) {
-        throw new Error(`Event bus status code: ${response.status}`);
-      }
+      await createBusApiClient({
+        BUSAPI_URL: url,
+        getToken: () => this.m2mService.getM2MToken(),
+      }).postEvent(msg);
     } catch (error) {
       const message =
         error instanceof Error ? error.message : "unknown error";
