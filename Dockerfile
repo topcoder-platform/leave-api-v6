@@ -24,7 +24,7 @@ ARG NODE_VERSION
 
 # Alpine replaces older package revisions; accept updates within the build's Node major.
 RUN apk upgrade --no-cache \
-    && apk add --no-cache "nodejs-current~${NODE_VERSION%%.*}" "nodejs-current>=26.13.1-r0" "zlib>=1.4-r0" \
+    && apk add --no-cache 'libcrypto3>=3.5.9-r1' 'libssl3>=3.5.9-r1' "nodejs-current~${NODE_VERSION%%.*}" "nodejs-current>=26.13.1-r0" "zlib>=1.4-r0" \
     && addgroup --system --gid 10001 app \
     && adduser --system --uid 10001 --ingroup app --home /usr/src/app app
 
