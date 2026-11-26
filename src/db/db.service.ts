@@ -1,3 +1,4 @@
+import { createPostgresAdapter } from '../prisma-adapter';
 import {
   Injectable,
   INestApplication,
@@ -15,11 +16,7 @@ export class DbService
   constructor(config: ConfigService) {
     const databaseUrl = config.get<string>("DATABASE_URL", "");
     super({
-      datasources: {
-        db: {
-          url: databaseUrl,
-        },
-      },
+      adapter: createPostgresAdapter(databaseUrl),
     });
   }
 
